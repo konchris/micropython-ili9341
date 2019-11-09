@@ -15,7 +15,7 @@
 
 import time
 import ustruct
-import glcdfont
+from ili9341 import glcdfont
 import framebuf
 from micropython import const
 

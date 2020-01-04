@@ -54,14 +54,16 @@ def color565(r, g, b):
 
 class ILI9341:
 
-    def __init__(self, spi, cs, dc, rst, width=320, height=240, mirror=True):
+    def __init__(self, spi, cs, dc, rst, w, h, r):
         self.spi = spi
         self.cs = cs
         self.dc = dc
         self.rst = rst
-        self.width = width
-        self.height = height
-        self.mirror = mirror
+        self._init_width = w
+        self._init_height = h
+        self.width = w
+        self.height = h
+        self.rotation = r
         self.cs.init(self.cs.OUT, value=1)
         self.dc.init(self.dc.OUT, value=0)
         self.rst.init(self.rst.OUT, value=0)
@@ -95,31 +97,63 @@ class ILI9341:
 
     def init(self):
         for command, data in (
-                (_RDDSDR, b"\x03\x80\x02"),
-                (_PWCRTLB, b"\x00\xc1\x30"),
-                (_PWRONCTRL, b"\x64\x03\x12\x81"),
-                (_DTCTRLA, b"\x85\x00\x78"),
-                (_PWCTRLA, b"\x39\x2c\x00\x34\x02"),
-                (_PRCTRL, b"\x20"),
-                (_DTCTRLB, b"\x00\x00"),
-                (_PWCTRL1, b"\x23"),
-                (_PWCTRL2, b"\x10"),
-                (_VMCTRL1, b"\x3e\x28"),
-                (_VMCTRL2, b"\x86"),
-                (_PIXSET, b"\x55"),
-                (_FRMCTR1, b"\x00\x18"),
-                (_DISCTRL, b"\x08\x82\x27"),
-                (_ENA3G, b"\x00"),
-                (_GAMSET, b"\x01"),
-                (_PGAMCTRL, b"\x0f\x31\x2b\x0c\x0e\x08\x4e\xf1\x37\x07\x10\x03\x0e\x09\x00"),
-                (_NGAMCTRL, b"\x00\x0e\x14\x03\x11\x07\x31\xc1\x48\x08\x0f\x0c\x31\x36\x0f")):
+            (_RDDSDR, b"\x03\x80\x02"),
+            (_PWCRTLB, b"\x00\xc1\x30"),
+            (_PWRONCTRL, b"\x64\x03\x12\x81"),
+            (_DTCTRLA, b"\x85\x00\x78"),
+            (_PWCTRLA, b"\x39\x2c\x00\x34\x02"),
+            (_PRCTRL, b"\x20"),
+            (_DTCTRLB, b"\x00\x00"),
+            (_PWCTRL1, b"\x23"),
+            (_PWCTRL2, b"\x10"),
+            (_VMCTRL1, b"\x3e\x28"),
+            (_VMCTRL2, b"\x86")):
             self._write(command, data)
 
-        if self.mirror:
-            self._write(_MADCTL, b"\x08")
-        else:
+        if self.rotation == 0:                  # 0 deg
             self._write(_MADCTL, b"\x48")
+            self.width = self._init_height
+            self.height = self._init_width
+        elif self.rotation == 1:                # 90 deg
+            self._write(_MADCTL, b"\x28")
+            self.width = self._init_width
+            self.height = self._init_height
+        elif self.rotation == 2:                # 180 deg
+            self._write(_MADCTL, b"\x88")
+            self.width = self._init_height
+            self.height = self._init_width
+        elif self.rotation == 3:                # 270 deg
+            self._write(_MADCTL, b"\xE8")
+            self.width = self._init_width
+            self.height = self._init_height
+        elif self.rotation == 4:                # Mirrored + 0 deg
+            self._write(_MADCTL, b"\xC8")
+            self.width = self._init_height
+            self.height = self._init_width
+        elif self.rotation == 5:                # Mirrored + 90 deg
+            self._write(_MADCTL, b"\x68")
+            self.width = self._init_width
+            self.height = self._init_height
+        elif self.rotation == 6:                # Mirrored + 180 deg
+            self._write(_MADCTL, b"\x08")
+            self.width = self._init_height
+            self.height = self._init_width
+        elif self.rotation == 7:                # Mirrored + 270 deg
+            self._write(_MADCTL, b"\xA8")
+            self.width = self._init_width
+            self.height = self._init_height
+        else:
+            self._write(_MADCTL, b"\x08")
 
+        for command, data in (
+            (_PIXSET, b"\x55"),
+            (_FRMCTR1, b"\x00\x18"),
+            (_DISCTRL, b"\x08\x82\x27"),
+            (_ENA3G, b"\x00"),
+            (_GAMSET, b"\x01"),
+            (_PGAMCTRL, b"\x0f\x31\x2b\x0c\x0e\x08\x4e\xf1\x37\x07\x10\x03\x0e\x09\x00"),
+            (_NGAMCTRL, b"\x00\x0e\x14\x03\x11\x07\x31\xc1\x48\x08\x0f\x0c\x31\x36\x0f")):
+            self._write(command, data)
         self._write(_SLPOUT)
         time.sleep_ms(120)
         self._write(_DISPON)
